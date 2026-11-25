@@ -1,0 +1,170 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isTokenAdmin() {
+      return isSignedIn() &&
+        request.auth.token.email == 'onyxglow@gmail.com' &&
+        request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isTokenAdmin() ||
+        (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    function isValidUser(data, userId) {
+      return data.keys().hasAll(['uid', 'fullName', 'email', 'phone', 'emailVerified', 'status', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'fullName', 'email', 'phone', 'emailVerified', 'status', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid == userId && data.uid.size() <= 128 &&
+        data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.phone is string && data.phone.size() <= 30 &&
+        data.emailVerified is bool &&
+        data.status in ['active', 'suspended'] &&
+        data.createdAt is string && data.createdAt.size() <= 40 &&
+        data.updatedAt is string && data.updatedAt.size() <= 40;
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['id', 'name', 'category', 'description', 'sizes', 'colors', 'priceLabel', 'availability', 'imageUrl', 'isPlaceholder', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'name', 'category', 'description', 'sizes', 'colors', 'priceLabel', 'availability', 'imageUrl', 'isPlaceholder', 'createdAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 120 &&
+        data.category in ['Dhaka Collection', 'Contemporary Ethnic Wear', 'Kurta Sets', 'Tops and Skirts', 'Signature Collection'] &&
+        data.description is string && data.description.size() >= 2 && data.description.size() <= 500 &&
+        data.sizes is list && data.sizes.size() >= 1 && data.sizes.size() <= 10 && data.sizes[0] is string &&
+        data.colors is list && data.colors.size() >= 1 && data.colors.size() <= 10 && data.colors[0] is string &&
+        data.priceLabel is string && data.priceLabel.size() <= 60 &&
+        data.availability is string && data.availability.size() <= 60 &&
+        data.imageUrl is string && data.imageUrl.size() <= 500 &&
+        data.isPlaceholder is bool &&
+        data.createdAt is string && data.createdAt.size() <= 40;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll(['id', 'orderReference', 'userId', 'customerName', 'customerEmail', 'customerPhone', 'shippingAddress', 'items', 'status', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'orderReference', 'userId', 'customerName', 'customerEmail', 'customerPhone', 'shippingAddress', 'notes', 'items', 'status', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+        data.orderReference is string && data.orderReference.size() >= 6 && data.orderReference.size() <= 32 &&
+        data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+        data.customerName is string && data.customerName.size() >= 2 && data.customerName.size() <= 100 &&
+        data.customerEmail is string && data.customerEmail.size() >= 3 && data.customerEmail.size() <= 160 &&
+        data.customerPhone is string && data.customerPhone.size() >= 6 && data.customerPhone.size() <= 30 &&
+        data.shippingAddress is string && data.shippingAddress.size() >= 4 && data.shippingAddress.size() <= 300 &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 500)) &&
+        data.items is list && data.items.size() >= 1 && data.items.size() <= 25 &&
+        data.items[0] is map &&
+        data.status in ['Pending', 'Confirmed', 'Preparing', 'Shipped', 'Delivered', 'Cancelled'] &&
+        data.createdAt is string && data.createdAt.size() <= 40 &&
+        data.updatedAt is string && data.updatedAt.size() <= 40;
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll(['id', 'referenceNumber', 'userId', 'fullName', 'email', 'phone', 'guests', 'attendanceConfirmed', 'privacyConsent', 'status', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'referenceNumber', 'userId', 'fullName', 'email', 'phone', 'guests', 'attendanceConfirmed', 'message', 'privacyConsent', 'status', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 128 &&
+        data.referenceNumber is string && data.referenceNumber.size() >= 6 && data.referenceNumber.size() <= 32 &&
+        data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+        data.fullName is string && data.fullName.size() >= 2 && data.fullName.size() <= 100 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.phone is string && data.phone.size() >= 6 && data.phone.size() <= 30 &&
+        data.guests is int && data.guests >= 1 && data.guests <= 10 &&
+        data.attendanceConfirmed == true &&
+        data.privacyConsent == true &&
+        (!('message' in data) || (data.message is string && data.message.size() <= 600)) &&
+        data.status in ['Pending', 'Confirmed', 'Cancelled', 'Attended'] &&
+        data.createdAt is string && data.createdAt.size() <= 40 &&
+        data.updatedAt is string && data.updatedAt.size() <= 40;
+    }
+
+    // Connection test document
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // Admin registry
+    match /admins/{adminUid} {
+      allow get: if isSignedIn() && (request.auth.uid == adminUid || isAdmin());
+      allow list, write: if false;
+    }
+
+    // Customer Profiles (PII isolated to owner or admin)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && (resource.data.uid == request.auth.uid || isTokenAdmin());
+      allow create: if isValidId(userId) && isSignedIn() && request.auth.uid == userId &&
+        isValidUser(incoming(), userId) && incoming().status == 'active';
+      allow update: if isValidId(userId) && isSignedIn() && isValidUser(incoming(), userId) && (
+        isAdmin() ||
+        (request.auth.uid == userId &&
+          incoming().uid == existing().uid &&
+          incoming().email == existing().email &&
+          incoming().status == existing().status &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'phone', 'emailVerified', 'updatedAt']))
+      );
+      allow delete: if false;
+    }
+
+    // Women Collection Catalogue
+    match /products/{productId} {
+      allow get: if isValidId(productId);
+      allow list: if true;
+      allow create, update: if isValidId(productId) && isAdmin() && isValidProduct(incoming());
+      allow delete: if isValidId(productId) && isAdmin();
+    }
+
+    // Public Storefront Configuration (event & siteContent)
+    match /config/{docId} {
+      allow get: if isValidId(docId);
+      allow list: if true;
+      allow create, update, delete: if isValidId(docId) && isAdmin();
+    }
+
+    // Customer Product Orders (requires sign-in)
+    match /orders/{orderId} {
+      allow get: if isValidId(orderId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isTokenAdmin());
+      allow create: if isValidId(orderId) && isSignedIn() &&
+        isValidOrder(incoming()) &&
+        incoming().userId == request.auth.uid &&
+        incoming().status == 'Pending';
+      allow update: if isValidId(orderId) && isAdmin() && isValidOrder(incoming());
+      allow delete: if isValidId(orderId) && isAdmin();
+    }
+
+    // Launch Event Bookings (requires sign-in; admin can also add bookings directly)
+    match /bookings/{bookingId} {
+      allow get: if isValidId(bookingId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isTokenAdmin());
+      allow create: if isValidId(bookingId) && isSignedIn() &&
+        isValidBooking(incoming()) && (
+          isAdmin() ||
+          (incoming().userId == request.auth.uid && incoming().status == 'Pending')
+        );
+      allow update: if isValidId(bookingId) && isAdmin() && isValidBooking(incoming());
+      allow delete: if isValidId(bookingId) && isAdmin();
+    }
+  }
+}

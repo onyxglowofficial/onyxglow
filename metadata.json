@@ -1,0 +1,6 @@
+{
+  "name": "ONYX GLOW",
+  "description": "Women's luxury fashion house from Nepal. Contemporary silhouettes inspired by traditional Nepali Dhaka textile heritage.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
